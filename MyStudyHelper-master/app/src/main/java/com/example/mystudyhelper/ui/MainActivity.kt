@@ -1,37 +1,84 @@
 package com.example.mystudyhelper.ui
 
 import android.os.Bundle
-import android.widget.Button
-import android.widget.Toast
-import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
-import com.example.mystudyhelper.R
-import com.example.mystudyhelper.viewmodel.MainViewModel
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.mystudyhelper.viewmodel.EjercicioViewModel
 
-class MainActivity : AppCompatActivity() {
-
-    // Instanciamos el ViewModel
-    private val viewModel: MainViewModel by viewModels()
-
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContent {
+            // Aplicamos el tema de Material 3
+            MaterialTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    MyStudyHelperApp()
+                }
+            }
+        }
+    }
+}
 
-        // Buscamos el botón en el diseño XML
-        val btnExit = findViewById<Button>(R.id.btnExit)
+@Composable
+fun MyStudyHelperApp() {
+    val navController = rememberNavController()
+    // Obtenemos el ViewModel compartido para todas las pantallas
+    val exerciseViewModel: EjercicioViewModel = viewModel()
 
-        // 1. Ante una interacción del usuario, la Vista notifica al ViewModel
-        btnExit.setOnClickListener {
-            viewModel.registerExitAttempt()
-            Toast.makeText(this, "Intento de salida registrado...", Toast.LENGTH_SHORT).show()
+    NavHost(
+        navController = navController,
+        startDestination = "registro"
+    ) {
+        // Pantalla 1: Registro de Luis
+        composable("registro") {
+            RegistroScreen(onNavigateNext = {
+                navController.navigate("ejercicio")
+            })
         }
 
-        // 2. El Enlace (Binding): Observamos el estado de estrés
-        viewModel.showStressOptions.observe(this) { isStressed ->
-            if (isStressed) {
-                // Mostramos la pantalla/mensaje dando a escoger material o descanso
-                Toast.makeText(this, "⚠️ Pareces estresado. ¿Quieres ver material o tomar un descanso?", Toast.LENGTH_LONG).show()
-            }
+        // Pantalla 2: Pregunta de Inglés y detección de estrés
+        composable("ejercicio") {
+            EjercicioScreen(
+                viewModel = exerciseViewModel,
+                onTriggerSaving = {
+                    navController.navigate("carga_guardado")
+                }
+            )
+        }
+
+        // Pantalla 3: Simulación de guardado (2 segundos)
+        composable("carga_guardado") {
+            CargaScreen(onFinished = {
+                navController.navigate("resolucion")
+            })
+        }
+
+        // Pantalla 4: Intervención (Tarjetas Moradas)
+        composable("resolucion") {
+            ResolucionScreen(
+                viewModel = exerciseViewModel,
+                onBackToStart = {
+                    // Limpiamos los datos antes de volver
+                    exerciseViewModel.resetAll()
+                    navController.navigate("ejercicio") {
+                        // Evita que el usuario regrese a la pantalla de resolución con el botón atrás
+                        popUpTo("registro") { inclusive = false }
+                    }
+                }
+            )
         }
     }
 }
