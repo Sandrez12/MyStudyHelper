@@ -1,9 +1,12 @@
 package com.example.mystudyhelper.model
 
+import android.util.Log
+
 class DataRepository {
-    // Ahora recibe el objeto del evento
-    fun saveStressEvent(evento: EventoEstres): Boolean {
-        println("Evento guardado: ${evento.id} para el estudiante ${evento.estudiante}")
+    // Registra el evento de estrés detectado por el sensor lógico
+    fun saveStressEvent(timestamp: Long, trigger: String): Boolean {
+        // En una app real, aquí usarías Room o Firebase
+        Log.d("SENSOR_LOGICO", "Evento guardado: $trigger a las $timestamp")
         return true
     }
 }

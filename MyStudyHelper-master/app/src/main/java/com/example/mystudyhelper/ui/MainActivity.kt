@@ -1,84 +1,40 @@
 package com.example.mystudyhelper.ui
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.example.mystudyhelper.viewmodel.EjercicioViewModel
+import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
+import com.example.mystudyhelper.R
+import com.example.mystudyhelper.viewmodel.MainViewModel
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
+
+    private val viewModel: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            // Aplicamos el tema de Material 3
-            MaterialTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    MyStudyHelperApp()
-                }
+        setContentView(R.layout.activity_main)
+
+        // INTERCEPTOR DEL SENSOR: Escucha gestos de "Atrás" del sistema
+        val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                viewModel.onExitAttempt()
+                // Opcional: Toast informativo para que tú veas que sí detecta el gesto
+                Toast.makeText(this@MainActivity, "Gesto detectado", Toast.LENGTH_SHORT).show()
             }
         }
-    }
-}
+        onBackPressedDispatcher.addCallback(this, callback)
 
-@Composable
-fun MyStudyHelperApp() {
-    val navController = rememberNavController()
-    // Obtenemos el ViewModel compartido para todas las pantallas
-    val exerciseViewModel: EjercicioViewModel = viewModel()
-
-    NavHost(
-        navController = navController,
-        startDestination = "registro"
-    ) {
-        // Pantalla 1: Registro de Luis
-        composable("registro") {
-            RegistroScreen(onNavigateNext = {
-                navController.navigate("ejercicio")
-            })
-        }
-
-        // Pantalla 2: Pregunta de Inglés y detección de estrés
-        composable("ejercicio") {
-            EjercicioScreen(
-                viewModel = exerciseViewModel,
-                onTriggerSaving = {
-                    navController.navigate("carga_guardado")
-                }
-            )
-        }
-
-        // Pantalla 3: Simulación de guardado (2 segundos)
-        composable("carga_guardado") {
-            CargaScreen(onFinished = {
-                navController.navigate("resolucion")
-            })
-        }
-
-        // Pantalla 4: Intervención (Tarjetas Moradas)
-        composable("resolucion") {
-            ResolucionScreen(
-                viewModel = exerciseViewModel,
-                onBackToStart = {
-                    // Limpiamos los datos antes de volver
-                    exerciseViewModel.resetAll()
-                    navController.navigate("ejercicio") {
-                        // Evita que el usuario regrese a la pantalla de resolución con el botón atrás
-                        popUpTo("registro") { inclusive = false }
-                    }
-                }
-            )
+        // REACCIÓN DEL SENSOR: Observa cuando el ViewModel detecta estrés
+        viewModel.showIntervention.observe(this) { isStressed ->
+            if (isStressed) {
+                Toast.makeText(
+                    this,
+                    "⚠️ Pareces estresado. ¿Quieres ver material o tomar un descanso?",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 }
