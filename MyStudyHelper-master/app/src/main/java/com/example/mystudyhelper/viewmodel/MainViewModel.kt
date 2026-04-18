@@ -37,4 +37,21 @@ class MainViewModel : ViewModel() {
             }
         }
     }
+    private val _showPermissionsDialog = MutableLiveData<Boolean>()
+    val showPermissionsDialog: LiveData<Boolean> get() = _showPermissionsDialog
+
+
+    fun onRegisterClicked() {
+        _showPermissionsDialog.value = true
+    }
+
+    // Esta función se llama si el usuario acepta ir a configuración
+    fun onPermissionsConfirmed() {
+        _showPermissionsDialog.value = false
+    }
+
+    // Esta función se llama si el usuario elige "Ahora no"
+    fun onPermissionsDismissed() {
+        _showPermissionsDialog.value = false
+    }
 }
