@@ -38,7 +38,6 @@ android {
     buildFeatures {
         compose = true
     }
-
 }
 
 dependencies {
@@ -51,7 +50,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
 
-    // Dependencias de Jetpack Compose (Corregidas y sin repetir)
+    // Dependencias de Jetpack Compose
     implementation("androidx.compose.ui:ui:1.6.0")
     implementation("androidx.compose.ui:ui-graphics:1.6.0")
     implementation("androidx.compose.ui:ui-tooling-preview:1.6.0")
@@ -67,9 +66,12 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
-// LIBRERÍAS DE ROOM PARA BASE DE DATOS
+    // LIBRERÍAS DE ROOM PARA BASE DE DATOS
     val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")
     implementation("androidx.room:room-ktx:$room_version") // Para usar Corrutinas sin trabar la app
     kapt("androidx.room:room-compiler:$room_version")
+
+    // ¡NUEVA LIBRERÍA DE TARJETAS! (Para los diseños del Dashboard)
+    implementation("androidx.cardview:cardview:1.0.0")
 }

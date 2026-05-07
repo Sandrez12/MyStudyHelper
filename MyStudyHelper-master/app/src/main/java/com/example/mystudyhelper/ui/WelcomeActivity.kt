@@ -1,8 +1,9 @@
 package com.example.mystudyhelper.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
-import android.widget.TextView // Importante agregar este
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.mystudyhelper.R
@@ -24,7 +25,9 @@ class WelcomeActivity : AppCompatActivity() {
         // Configuración del botón
         val btnComenzar = findViewById<Button>(R.id.btnComenzar)
         btnComenzar.setOnClickListener {
-            Toast.makeText(this, "Iniciando sesión de $nombreUsuario...", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, SubjectsActivity::class.java)
+            startActivity(intent)
+            finish() // Cerramos la bienvenida para que no pueda volver atrás
         }
     }
 }
