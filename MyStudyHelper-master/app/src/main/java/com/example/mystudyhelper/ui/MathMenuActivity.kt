@@ -25,5 +25,10 @@ class MathMenuActivity : AppCompatActivity() {
             val intent = android.content.Intent(this, AlgebraSyllabusActivity::class.java)
             startActivity(intent)
         }
+        val btnEscaner = findViewById<CardView>(R.id.btnMenuEscaner)
+        btnEscaner.setOnClickListener {
+            val intent = android.content.Intent(this, ScannerActivity::class.java)
+            startActivity(intent)
+        }
     }
 }

@@ -1,5 +1,6 @@
 package com.example.mystudyhelper.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.ImageView
 import android.widget.Toast
@@ -18,9 +19,9 @@ class AlgebraSyllabusActivity : AppCompatActivity() {
 
         // Botón del Escáner Photomath
         findViewById<CardView>(R.id.cardEscaner).setOnClickListener {
-            Toast.makeText(this, "Abriendo cámara para escanear...", Toast.LENGTH_SHORT).show()
-            // val intent = Intent(this, ScannerActivity::class.java)
-            // startActivity(intent)
+            // ¡Ya le quitamos los comentarios! Ahora sí abre la cámara.
+            val intent = Intent(this, ScannerActivity::class.java)
+            startActivity(intent)
         }
 
         // Botón de la Lección tipo Duolingo
