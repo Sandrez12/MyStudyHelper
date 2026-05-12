@@ -38,5 +38,6 @@
         <activity android:name=".ui.StudyActivity" />
         <activity android:name=".ui.LessonListActivity" />
         <activity android:name=".ui.SubmateriasActivity" />
+        <activity android:name=".ui.EnglishLevelsActivity" />
     </application>
 </manifest>

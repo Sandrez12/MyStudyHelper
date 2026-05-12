@@ -12,7 +12,7 @@ class SubjectsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_subjects)
 
         val cardMatematicas = findViewById<CardView>(R.id.cardMatematicas)
-        val cardIngles = findViewById<CardView>(R.id.cardIngles)
+        val cardIngles = findViewById<CardView>(R.id.cardDashboardIngles)
 
         cardMatematicas.setOnClickListener {
             // Cuando tengamos MathMenuActivity lista, la lanzaremos aquí
@@ -22,6 +22,27 @@ class SubjectsActivity : AppCompatActivity() {
 
         cardIngles.setOnClickListener {
             // Aquí irá el módulo de idiomas más adelante
+        }
+        findViewById<CardView>(R.id.cardDashboardProgramacion).setOnClickListener {
+            val intent = android.content.Intent(this, LessonListActivity::class.java)
+            intent.putExtra("MATERIA", "Programación")
+            startActivity(intent)
+        }
+
+        findViewById<CardView>(R.id.cardDashboardGraficacion).setOnClickListener {
+            val intent = android.content.Intent(this, LessonListActivity::class.java)
+            intent.putExtra("MATERIA", "Graficación")
+            startActivity(intent)
+        }
+
+        findViewById<CardView>(R.id.cardDashboardEmbebidos).setOnClickListener {
+            val intent = android.content.Intent(this, LessonListActivity::class.java)
+            intent.putExtra("MATERIA", "Sistemas Embebidos")
+            startActivity(intent)
+        }
+        findViewById<CardView>(R.id.cardDashboardIngles).setOnClickListener {
+            val intent = Intent(this, EnglishLevelsActivity::class.java)
+            startActivity(intent)
         }
     }
 }
