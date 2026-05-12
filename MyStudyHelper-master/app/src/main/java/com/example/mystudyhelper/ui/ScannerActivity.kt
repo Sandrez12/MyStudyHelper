@@ -2,16 +2,15 @@ package com.example.mystudyhelper.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.view.View
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.core.*
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
@@ -21,19 +20,17 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import net.objecthunter.exp4j.ExpressionBuilder
-import java.io.File
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.URL
+import java.net.URLEncoder
 class ScannerActivity : AppCompatActivity() {
 
     private lateinit var viewFinder: PreviewView
-    private lateinit var progressBar: ProgressBar
-    private lateinit var btnCapturar: FloatingActionButton
-    private var imageCapture: ImageCapture? = null
-    private lateinit var cameraExecutor: ExecutorService
-
-    // Diálogo de carga para el usuario
+    private var cameraProvider: ProcessCameraProvider? = null // Guardamos el control de la cámara
     private var processingDialog: AlertDialog? = null
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -47,10 +44,7 @@ class ScannerActivity : AppCompatActivity() {
         setContentView(R.layout.activity_scanner)
 
         viewFinder = findViewById(R.id.viewFinder)
-        btnCapturar = findViewById(R.id.btnCapturar)
-
-        // Inicializamos el ejecutor para guardar fotos en segundo plano sin trabar la app
-        cameraExecutor = Executors.newSingleThreadExecutor()
+        val btnCapturar = findViewById<FloatingActionButton>(R.id.btnCapturar)
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             startCamera()
@@ -59,7 +53,7 @@ class ScannerActivity : AppCompatActivity() {
         }
 
         btnCapturar.setOnClickListener {
-            tomaFotoFijaYAnaliza()
+            congelarYAnalizar()
         }
     }
 
@@ -67,22 +61,17 @@ class ScannerActivity : AppCompatActivity() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
 
         cameraProviderFuture.addListener({
-            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+            cameraProvider = cameraProviderFuture.get()
 
             val preview = Preview.Builder().build().also {
                 it.setSurfaceProvider(viewFinder.surfaceProvider)
             }
 
-            // Optimizamos ImageCapture para máxima calidad de imagen
-            imageCapture = ImageCapture.Builder()
-                .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-                .build()
-
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
+                cameraProvider?.unbindAll()
+                cameraProvider?.bindToLifecycle(this, cameraSelector, preview)
             } catch (exc: Exception) {
                 Toast.makeText(this, "Error al iniciar cámara", Toast.LENGTH_SHORT).show()
             }
@@ -90,103 +79,106 @@ class ScannerActivity : AppCompatActivity() {
     }
 
     // ==========================================================
-    // NUEVO FLUJO MEJORADO: TOMA FOTO FIJA -> ANALIZA TEMP FILE
+    // NUEVA LÓGICA: CONGELA LA PANTALLA Y LEE EL BITMAP DIRECTO
     // ==========================================================
-    private fun tomaFotoFijaYAnaliza() {
-        val imageCapture = imageCapture ?: return
+    // ==========================================================
+    // NUEVA LÓGICA: CONGELA LA PANTALLA, RECORTA Y ANALIZA
+    // ==========================================================
+    private fun congelarYAnalizar() {
+        val bitmapFijo: Bitmap? = viewFinder.bitmap
 
-        // 1. Mostramos UI de carga para que el usuario sepa que estamos trabajando
+        if (bitmapFijo == null) {
+            Toast.makeText(this, "Aún no carga la cámara", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        cameraProvider?.unbindAll()
         showLoadingDialog()
 
-        // 2. Creamos un archivo temporal para guardar la foto
-        val photoFile = File(
-            cacheDir, // Se guarda en caché, se borra automáticamente después
-            "ocr_capture_${System.currentTimeMillis()}.jpg"
-        )
+        // ---------------------------------------------------
+        // MAGIA NUEVA: Recortar el centro de la imagen
+        // ---------------------------------------------------
+        val width = bitmapFijo.width
+        val height = bitmapFijo.height
 
-        // Configuración de salida
-        val outputFileOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+        // Calculamos un área similar a tu marco morado (70% de ancho, 25% de alto)
+        val anchoRecorte = (width * 0.7).toInt()
+        val altoRecorte = (height * 0.25).toInt()
 
-        // 3. Tomamos la foto fija real
-        imageCapture.takePicture(
-            outputFileOptions,
-            cameraExecutor, // Lo hacemos en segundo plano
-            object : ImageCapture.OnImageSavedCallback {
-                override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    // 4. La foto se guardó con éxito. Ahora la analizamos.
-                    Handler(Looper.getMainLooper()).post {
-                        procesarFotoFija(photoFile)
-                    }
-                }
+        // Encontramos las coordenadas del centro exacto
+        val ejeX = (width - anchoRecorte) / 2
+        val ejeY = (height - altoRecorte) / 2
 
-                override fun onError(exception: ImageCaptureException) {
-                    Handler(Looper.getMainLooper()).post {
-                        dismissLoadingDialog()
-                        Toast.makeText(baseContext, "Error al capturar foto", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-        )
-    }
+        // Creamos una nueva imagen que solo contiene el pedacito del centro
+        val bitmapRecortado = Bitmap.createBitmap(bitmapFijo, ejeX, ejeY, anchoRecorte, altoRecorte)
+        // ---------------------------------------------------
 
-    private fun procesarFotoFija(photoFile: File) {
-        // 5. Convertimos el archivo de imagen a InputImage de ML Kit
-        val image = InputImage.fromFilePath(this, android.net.Uri.fromFile(photoFile))
+        // Pasamos SOLO el recorte limpio a la Inteligencia Artificial
+        val image = InputImage.fromBitmap(bitmapRecortado, 0)
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
-        // 6. Iniciamos el reconocimiento de texto sobre la foto FIJA y NÍTIDA
         recognizer.process(image)
             .addOnSuccessListener { visionText ->
-                // Limpiamos el texto (quitamos saltos de línea y espacios)
                 val ecuacionLeida = visionText.text.replace("\n", "").replace(" ", "")
 
-                // Ocultamos diálogo de carga
-                dismissLoadingDialog()
-
                 if (ecuacionLeida.isNotEmpty()) {
-                    // 7. Resolvemos la ecuación matemática
                     resolverEcuacion(ecuacionLeida)
                 } else {
-                    Toast.makeText(this, "No detecté nada en la foto. Intenta enfocar mejor.", Toast.LENGTH_SHORT).show()
+                    dismissLoadingDialog()
+                    mostrarErrorYReiniciar("El recuadro está vacío o no entiendo la letra. Intenta centrarlo bien.")
                 }
-
-                // Borramos el archivo temporal para no llenar el celular
-                photoFile.delete()
             }
             .addOnFailureListener { e ->
                 dismissLoadingDialog()
-                Toast.makeText(this, "Error al leer texto de la foto", Toast.LENGTH_SHORT).show()
-                photoFile.delete()
+                mostrarErrorYReiniciar("Error al leer la imagen.")
             }
     }
 
+    // ==========================================================
+    // EL NUEVO CEREBRO: CONEXIÓN A LA API DE NEWTON
+    // ==========================================================
     private fun resolverEcuacion(ecuacion: String) {
-        try {
-            // Reemplazos básicos para ayudar a la librería (exp4j usa '*' para multiplicar)
-            val ecuacionLimpia = ecuacion.replace("x", "*").replace("X", "*").replace("=","")
+        // Abrimos un hilo en segundo plano (Corrutina) para que la pantalla no se congele
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // 1. Preparamos el texto para que sea una URL válida (codificamos signos como '+')
+                val ecuacionLimpia = ecuacion.replace(" ", "")
+                val urlEncoded = URLEncoder.encode(ecuacionLimpia, "UTF-8")
 
-            val result = ExpressionBuilder(ecuacionLimpia).build().evaluate()
-            mostrarResultado(ecuacion, result.toString())
-        } catch (e: Exception) {
-            // Si tiene 'x' algebraicas u otras cosas que exp4j no sabe calcular directamente
-            mostrarResultado(ecuacion, "Es Álgebra (No aritmética simple). Falta conectar Rigoberta para resolver.")
+                // 2. Hacemos la petición HTTP al servidor de Newton (endpoint de simplificación)
+                val url = URL("https://newton.vercel.app/api/v2/simplify/$urlEncoded")
+                val jsonResponse = url.readText() // Descargamos la respuesta
+
+                // 3. La respuesta viene en formato JSON, extraemos solo el resultado
+                val jsonObject = JSONObject(jsonResponse)
+                val resultadoAPI = jsonObject.getString("result")
+
+                // 4. Volvemos al hilo principal (Main) para actualizar la interfaz gráfica
+                withContext(Dispatchers.Main) {
+                    dismissLoadingDialog()
+                    mostrarResultado(ecuacionLimpia, resultadoAPI)
+                }
+
+            } catch (e: Exception) {
+                // Si no hay internet o la API no reconoce los garabatos matemáticos
+                withContext(Dispatchers.Main) {
+                    dismissLoadingDialog()
+                    mostrarErrorYReiniciar("Leí '$ecuacion' pero no pude resolverla. Asegúrate de que sea una expresión clara.")
+                }
+            }
         }
     }
 
     // ==========================================================
-    // UI HELPERS (Diálogos de carga y resultados)
+    // UI HELPERS
     // ==========================================================
     private fun showLoadingDialog() {
-        val builder = AlertDialog.Builder(this)
-        val dialogView = layoutInflater.inflate(R.layout.activity_subjects, null) // Usamos un layout cualquiera para el loading
-
-        // Creamos un diálogo simple con un ProgressBar
         val progressBar = ProgressBar(this)
         progressBar.setPadding(50, 50, 50, 50)
 
         processingDialog = AlertDialog.Builder(this)
-            .setTitle("🧠 Analizando foto...")
-            .setMessage("Espera un momento mientras leo la ecuación")
+            .setTitle("🧠 Analizando...")
+            .setMessage("Extrayendo números de la imagen")
             .setView(progressBar)
             .setCancelable(false)
             .create()
@@ -199,15 +191,25 @@ class ScannerActivity : AppCompatActivity() {
 
     private fun mostrarResultado(ecuacion: String, resultado: String) {
         AlertDialog.Builder(this)
-            .setTitle("✨ ¡Ecuación Capturada!")
-            .setMessage("Leímos:\n$ecuacion\n\nResultado:\n$resultado")
-            .setPositiveButton("Volver a Escanear") { dialog, _ -> dialog.dismiss() }
+            .setTitle("✨ ¡Resuelto!")
+            .setMessage("Detectamos:\n$ecuacion\n\nResultado:\n$resultado")
+            .setPositiveButton("Escanear otra") { dialog, _ ->
+                dialog.dismiss()
+                startCamera() // Vuelve a encender el video en vivo
+            }
             .setCancelable(false)
             .show()
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        cameraExecutor.shutdown() // Cerramos el hilo de fondo al cerrar la pantalla
+    private fun mostrarErrorYReiniciar(mensaje: String) {
+        AlertDialog.Builder(this)
+            .setTitle("Ups...")
+            .setMessage(mensaje)
+            .setPositiveButton("Reintentar") { dialog, _ ->
+                dialog.dismiss()
+                startCamera() // Vuelve a encender el video en vivo
+            }
+            .setCancelable(false)
+            .show()
     }
 }

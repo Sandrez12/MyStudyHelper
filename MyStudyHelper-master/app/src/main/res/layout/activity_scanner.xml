@@ -18,7 +18,19 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
-
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Nota: no siempre dara el resultado correcto"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:shadowColor="#000000"
+        android:shadowRadius="4"
+        android:layout_marginBottom="165dp"
+        app:layout_constraintBottom_toTopOf="@+id/btnCapturar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
