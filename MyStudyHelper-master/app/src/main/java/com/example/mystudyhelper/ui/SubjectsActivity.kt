@@ -11,37 +11,42 @@ class SubjectsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_subjects)
 
-        val cardMatematicas = findViewById<CardView>(R.id.cardMatematicas)
-        val cardIngles = findViewById<CardView>(R.id.cardDashboardIngles)
-
-        cardMatematicas.setOnClickListener {
-            // Cuando tengamos MathMenuActivity lista, la lanzaremos aquí
+        // ==========================================
+        // 1. MATEMÁTICAS (Va a su propio menú avanzado)
+        // ==========================================
+        findViewById<CardView>(R.id.cardMatematicas).setOnClickListener {
             val intent = Intent(this, MathMenuActivity::class.java)
             startActivity(intent)
         }
 
-        cardIngles.setOnClickListener {
-            // Aquí irá el módulo de idiomas más adelante
+        // ==========================================
+        // 2. INGLÉS (Va a la pantalla de niveles A1-C1)
+        // ==========================================
+        findViewById<CardView>(R.id.cardDashboardIngles).setOnClickListener {
+            // Mandamos a un menú intermedio como en Programación
+            val intent = Intent(this, SubjectMenuActivity::class.java)
+            intent.putExtra("MATERIA", "Inglés")
+            startActivity(intent)
         }
+
+        // ==========================================
+        // 3. MATERIAS UNIVERSITARIAS (Van al Menú Genérico)
+        // ==========================================
         findViewById<CardView>(R.id.cardDashboardProgramacion).setOnClickListener {
-            val intent = android.content.Intent(this, LessonListActivity::class.java)
+            val intent = Intent(this, SubjectMenuActivity::class.java)
             intent.putExtra("MATERIA", "Programación")
             startActivity(intent)
         }
 
         findViewById<CardView>(R.id.cardDashboardGraficacion).setOnClickListener {
-            val intent = android.content.Intent(this, LessonListActivity::class.java)
+            val intent = Intent(this, SubjectMenuActivity::class.java)
             intent.putExtra("MATERIA", "Graficación")
             startActivity(intent)
         }
 
         findViewById<CardView>(R.id.cardDashboardEmbebidos).setOnClickListener {
-            val intent = android.content.Intent(this, LessonListActivity::class.java)
+            val intent = Intent(this, SubjectMenuActivity::class.java)
             intent.putExtra("MATERIA", "Sistemas Embebidos")
-            startActivity(intent)
-        }
-        findViewById<CardView>(R.id.cardDashboardIngles).setOnClickListener {
-            val intent = Intent(this, EnglishLevelsActivity::class.java)
             startActivity(intent)
         }
     }
