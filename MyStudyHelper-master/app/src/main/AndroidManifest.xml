@@ -13,6 +13,8 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
         android:theme="@style/Theme.MyStudyHelper">
 
         <activity
@@ -25,20 +27,22 @@
         </activity>
 
         <activity
-            android:name=".ui.MainActivity"
+            android:name=".MainActivity"
             android:exported="false" />
+
+        <activity android:name=".ui.LoginActivity" />
+        <activity android:name=".ui.SubjectsActivity" />
+        <activity android:name=".ui.StudyActivity" />
+        <activity android:name=".ui.LessonListActivity" />
 
         <activity android:name=".ui.InterventionActivity" />
         <activity android:name=".ui.WelcomeActivity" />
-        <activity android:name=".ui.LoginActivity" />
         <activity android:name=".ui.MathMenuActivity" />
-        <activity android:name=".ui.SubjectsActivity" />
         <activity android:name=".ui.ScannerActivity" />
         <activity android:name=".ui.QuizActivity" />
-        <activity android:name=".ui.StudyActivity" />
-        <activity android:name=".ui.LessonListActivity" />
         <activity android:name=".ui.SubmateriasActivity" />
         <activity android:name=".ui.EnglishLevelsActivity" />
         <activity android:name=".ui.SubjectMenuActivity" />
+
     </application>
 </manifest>

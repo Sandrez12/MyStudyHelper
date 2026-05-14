@@ -60,7 +60,7 @@
             android:textColor="#000000"
             android:textStyle="bold"/>
         <EditText
-            android:id="@+id/etCorreo"
+            android:id="@+id/etRegistroCorreo"
             android:layout_width="match_parent"
             android:layout_height="50dp"
             android:hint="ejemplo@correo.com"
@@ -77,7 +77,7 @@
             android:textColor="#000000"
             android:textStyle="bold"/>
         <EditText
-            android:id="@+id/etPassword"
+            android:id="@+id/etRegistroPassword"
             android:layout_width="match_parent"
             android:layout_height="50dp"
             android:hint="••••••••"
@@ -144,7 +144,7 @@
         </LinearLayout>
 
         <Button
-            android:id="@+id/btnCrearCuenta"
+            android:id="@+id/btnRegistrar"
             android:layout_width="match_parent"
             android:layout_height="60dp"
             android:text="Crear cuenta ->"

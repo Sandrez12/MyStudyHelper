@@ -7,54 +7,59 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import androidx.room.Room
+import com.example.mystudyhelper.MainActivity // Importamos tu pantalla de registro
 import com.example.mystudyhelper.R
 import com.example.mystudyhelper.model.AppDatabase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class LoginActivity : AppCompatActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Conectamos con el diseño visual que creamos (activity_login.xml)
         setContentView(R.layout.activity_login)
 
-        // 1. Inicializamos la Base de Datos
-        val db = Room.databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java, "study_database"
-        ).build()
-
-        // 2. Conectamos los elementos de la pantalla
-        val etCorreo = findViewById<EditText>(R.id.etLoginCorreo)
-        val etPassword = findViewById<EditText>(R.id.etLoginPassword)
+        val etCorreo = findViewById<EditText>(R.id.etCorreo)
+        val etPassword = findViewById<EditText>(R.id.etPassword)
         val btnLogin = findViewById<Button>(R.id.btnLogin)
+        val btnIrARegistro = findViewById<Button>(R.id.btnIrARegistro)
 
-        // 3. Lógica al presionar el botón
         btnLogin.setOnClickListener {
-            val email = etCorreo.text.toString().trim()
+            val correo = etCorreo.text.toString().trim()
             val pass = etPassword.text.toString().trim()
 
-            // Validamos que no estén vacíos
-            if (email.isNotEmpty() && pass.isNotEmpty()) {
-                // Usamos una Corrutina para buscar en la base de datos sin trabar la pantalla
-                lifecycleScope.launch {
-                    val user = db.userDao().login(email, pass)
+            if (correo.isEmpty() || pass.isEmpty()) {
+                Toast.makeText(this, "Por favor, llena todos los campos", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
-                    if (user != null) {
-                        // ¡Existe! Lo mandamos a la pantalla de Bienvenida
-                        val intent = Intent(this@LoginActivity, WelcomeActivity::class.java)
-                        // Le mandamos su nombre en la mochila para que lo salude
-                        intent.putExtra("NOMBRE_USUARIO", user.nombre)
+            val db = AppDatabase.getDatabase(this)
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                // CORRECCIÓN: usamos usuarioDao() con minúscula
+                val usuario = db.usuarioDao().login(correo, pass)
+
+                withContext(Dispatchers.Main) {
+                    if (usuario != null) {
+                        Toast.makeText(this@LoginActivity, "¡Bienvenido de nuevo!", Toast.LENGTH_SHORT).show()
+
+                        // Asegúrate de que SubjectsActivity exista, si no, usa la que tengas de menú
+                        val intent = Intent(this@LoginActivity, SubjectsActivity::class.java)
+                        intent.putExtra("USUARIO_ID", usuario.id)
                         startActivity(intent)
-                        finish() // Cerramos el login
+                        finish()
                     } else {
-                        // No existe o escribió mal la contraseña
-                        Toast.makeText(this@LoginActivity, "Credenciales incorrectas o usuario no registrado", Toast.LENGTH_SHORT).show()
+                        etCorreo.error = "Credenciales incorrectas"
+                        Toast.makeText(this@LoginActivity, "El correo o la contraseña no coinciden", Toast.LENGTH_LONG).show()
                     }
                 }
-            } else {
-                Toast.makeText(this, "Por favor llena todos los campos", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        btnIrARegistro?.setOnClickListener {
+            // CORRECCIÓN: Como tu registro es MainActivity, apuntamos ahí
+            startActivity(Intent(this, MainActivity::class.java))
         }
     }
 }

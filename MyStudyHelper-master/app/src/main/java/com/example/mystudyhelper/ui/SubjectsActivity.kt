@@ -6,6 +6,7 @@ import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import com.example.mystudyhelper.R
+import android.widget.TextView
 
 class SubjectsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,5 +74,20 @@ class SubjectsActivity : AppCompatActivity() {
             startActivity(intent)
             finish()
         }
+    }
+    private fun configurarBienestar() {
+        val mensajesParaUsuario= listOf(
+            "No eres una máquina, permítete descansar. 🌱",
+            "Un pequeño avance sigue siendo un avance. ✨",
+            "Respira profundo 3 veces antes de empezar. 🌬️",
+            "Beber agua mejora tu concentración. 💧",
+            "Tu valor no depende de tus calificaciones. ❤️",
+            "Incluso los mejores sistemas necesitan un reinicio. Descansa. 💻",
+            "Organiza tu tiempo, pero no olvides vivir. 🕒"
+        )
+
+        val tvMensaje = findViewById<TextView>(R.id.tvMensajeBienestar)
+        // Elige un mensaje al azar de la lista
+        tvMensaje.text = mensajesParaUsuario.random()
     }
 }

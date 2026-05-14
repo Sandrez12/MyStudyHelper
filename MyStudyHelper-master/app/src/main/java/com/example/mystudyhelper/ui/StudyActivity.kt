@@ -1,10 +1,12 @@
 package com.example.mystudyhelper.ui
 
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.mystudyhelper.R
@@ -20,16 +22,21 @@ class StudyActivity : AppCompatActivity() {
     private lateinit var tvTituloLeccion: TextView
     private lateinit var tvContenidoTeorico: TextView
     private lateinit var tvEjemploPractico: TextView
+    private lateinit var tvReloj: TextView
+
+    // Declaramos el timer como opcional para evitar errores si se cierra la app rápido
+    private var timer: CountDownTimer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_study)
 
-        // 1. Vinculamos las vistas del XML con Kotlin
+        // 1. Vinculamos las vistas
         tvMateriaHeader = findViewById(R.id.tvMateriaHeader)
         tvTituloLeccion = findViewById(R.id.tvTituloLeccion)
         tvContenidoTeorico = findViewById(R.id.tvContenidoTeorico)
         tvEjemploPractico = findViewById(R.id.tvEjemploPractico)
+        tvReloj = findViewById(R.id.tvCronometroPomodoro)
 
         // Botón de regresar
         findViewById<ImageView>(R.id.btnRegresar).setOnClickListener {
@@ -42,64 +49,84 @@ class StudyActivity : AppCompatActivity() {
             finish()
         }
 
-        // 2. Cargamos los datos desde Room
+        // 2. Iniciamos las funciones principales
         cargarLeccionDesdeBD()
+        iniciarTemporizadorRelajante()
     }
 
     private fun cargarLeccionDesdeBD() {
         val db = AppDatabase.getDatabase(this)
         val dao = db.leccionDao()
-
-        // Recibimos el ID que nos mandó la pantalla de la lista (-1 si hay error)
         val idLeccionSeleccionada = intent.getIntExtra("LECCION_ID", -1)
 
         lifecycleScope.launch(Dispatchers.IO) {
-
-            // 1. INYECTAR DATOS GENERALES (Si la BD está vacía)
-            var comprobacion = dao.obtenerLeccionesPorMateria("Álgebra")
+            // Inyectamos datos si no existen
+            val comprobacion = dao.obtenerLeccionesPorMateria("Álgebra")
             if (comprobacion.isEmpty()) {
                 val leccionesGenerales = listOf(
                     Leccion(
                         materia = "Álgebra",
                         titulo = "Ecuaciones de Primer Grado",
-                        contenidoTeorico = "Una ecuación es una igualdad matemática con incógnitas. El objetivo es 'despejar' la letra (como la x) para descubrir su valor, pasando los números al otro lado con la operación contraria.",
-                        ejemploPractico = "Imagina que pides comida rápida con tus amigos. Compran 3 pizzas iguales y pagan un envío de 30 pesos. Si el total fue de 480 pesos, ¿cuánto costó cada pizza?\n\n3x + 30 = 480\n3x = 450\nx = 150 pesos."
+                        contenidoTeorico = "Una ecuación es una igualdad matemática con incógnitas. El objetivo es 'despejar' la x.",
+                        ejemploPractico = "3x + 30 = 480 -> x = 150."
                     ),
                     Leccion(
-                        materia = "Álgebra",
-                        titulo = "Sistemas de Ecuaciones",
-                        contenidoTeorico = "Es un conjunto de dos o más ecuaciones con varias incógnitas. Buscamos los valores que hacen que todas las ecuaciones sean verdaderas al mismo tiempo.",
-                        ejemploPractico = "En la taquilla de un partido de americano, se vendieron 500 boletos. Los de adulto costaban 100 y los de niño 50. Si se recaudaron 40,000 pesos, un sistema de ecuaciones te diría exactamente cuántos adultos y niños entraron al estadio."
-                    ),
-                    Leccion(
-                        materia = "Aritmética",
-                        titulo = "Regla de Tres Simple",
-                        contenidoTeorico = "Es una herramienta para resolver problemas de proporciones. Si conoces tres valores, puedes descubrir el cuarto multiplicando cruzado y dividiendo.",
-                        ejemploPractico = "Si estás descargando un videojuego de 80 GB y tu consola marca que descargó 10 GB en 15 minutos, puedes calcular cuánto tardará en total:\n\n10 GB -> 15 min\n80 GB -> x min\n\nx = (80 * 15) / 10 = 120 minutos."
+                        materia = "Inglés",
+                        titulo = "Basic Greetings & To Be",
+                        contenidoTeorico = "El verbo 'To Be' es ser o estar. (I am, You are, He is).",
+                        ejemploPractico = "I am a student at BUAP."
                     )
                 )
                 dao.insertarLecciones(leccionesGenerales)
             }
 
-            // 2. BUSCAR LA LECCIÓN ESPECÍFICA POR SU ID
             val leccionActual = if (idLeccionSeleccionada != -1) {
                 dao.obtenerLeccionPorId(idLeccionSeleccionada)
             } else {
-                // Si por alguna razón no llegó el ID, mostramos la primera de Álgebra como respaldo
                 dao.obtenerLeccionesPorMateria("Álgebra").firstOrNull()
             }
 
-            // 3. ACTUALIZAR LA PANTALLA
             withContext(Dispatchers.Main) {
                 if (leccionActual != null) {
                     tvMateriaHeader.text = "Lección: ${leccionActual.materia}"
                     tvTituloLeccion.text = "🧠 ${leccionActual.titulo}"
                     tvContenidoTeorico.text = leccionActual.contenidoTeorico
                     tvEjemploPractico.text = leccionActual.ejemploPractico
-                } else {
-                    Toast.makeText(this@StudyActivity, "Error al cargar", Toast.LENGTH_SHORT).show()
                 }
             }
         }
+    }
+
+    private fun iniciarTemporizadorRelajante() {
+        // 25 minutos (1500000 ms)
+        timer = object : CountDownTimer(10000, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                val minutos = (millisUntilFinished / 1000) / 60
+                val segundos = (millisUntilFinished / 1000) % 60
+                tvReloj.text = String.format("%02d:%02d", minutos, segundos)
+            }
+
+            override fun onFinish() {
+                mostrarAlertaDescanso()
+            }
+        }.start()
+    }
+
+    private fun mostrarAlertaDescanso() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("¡Tiempo de un respiro! 🌿")
+        builder.setMessage("Has estudiado mucho. Tu cerebro necesita procesar la información.\n\nDesconéctate 5 minutos.")
+        builder.setPositiveButton("Entendido") { dialog, _ ->
+            dialog.dismiss()
+            iniciarTemporizadorRelajante()
+        }
+        builder.setCancelable(false)
+        builder.show()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Cancelamos el timer solo si existe para evitar NullPointerException
+        timer?.cancel()
     }
 }
